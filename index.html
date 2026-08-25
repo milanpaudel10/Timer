@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aesthetic Timer & Stopwatch</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --accent-color: #0f172a;
+      --button-bg: #0f172a;
+      --button-text: #ffffff;
+      --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+    }
+
+    .container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 36px;
+      padding: 36px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: var(--shadow);
+      width: 380px;
+      position: relative;
+    }
+
+    /* Navigation Tabs */
+    .tab-switch {
+      display: flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--text-primary);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    /* Display Area & Ring */
+    .display-container {
+      position: relative;
+      width: 250px;
+      height: 250px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .progress-ring {
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring-bg {
+      fill: none;
+      stroke: #f1f5f9;
+      stroke-width: 8;
+    }
+
+    .progress-ring-fill {
+      fill: none;
+      stroke: var(--accent-color);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 691.15; /* 2 * PI * 110 */
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.2s linear;
+    }
+
+    .time-readout {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      text-align: center;
+      padding: 0 10px;
+    }
+
+    #time-display {
+      font-size: 2.5rem;
+      font-weight: 300;
+      letter-spacing: -1px;
+      white-space: nowrap;
+    }
+
+    #time-display.small-font {
+      font-size: 1.85rem;
+    }
+
+    #milliseconds-display {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      height: 1.2rem;
+    }
+
+    .status-text {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* Custom Input Row for Timer */
+    .timer-inputs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .input-group label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+
+    .input-group input {
+      width: 58px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: #f8fafc;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .input-group input:focus {
+      border-color: var(--accent-color);
+      background: #ffffff;
+    }
+
+    /* Circular Buttons Row */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 24px;
+      width: 100%;
+    }
+
+    .circle-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+      transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .circle-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+    }
+
+    .circle-btn:active {
+      transform: scale(0.95);
+    }
+
+    .circle-btn.secondary {
+      background-color: #e2e8f0;
+      color: var(--text-primary);
+      box-shadow: none;
+    }
+
+    .circle-btn.secondary:hover {
+      background-color: #cbd5e1;
+    }
+
+    /* History Button */
+    .history-btn-wrapper {
+      margin-top: 18px;
+    }
+
+    .history-trigger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      padding: 6px 18px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .history-trigger-btn:hover {
+      background: #e2e8f0;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
+      border-radius: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 20px;
+      width: 100%;
+      max-height: 85%;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .modal-header h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+      margin-bottom: 12px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+    }
+
+    .history-item-time {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .history-item-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .action-btn.resume {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .action-btn.delete {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .clear-history-btn {
+      width: 100%;
+      padding: 8px 0;
+      border-radius: 12px;
+      border: none;
+      background: #f1f5f9;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .clear-history-btn:hover {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin: 20px 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Mode Switcher -->
+    <div class="tab-switch">
+      <button id="tab-timer" class="tab-btn active">Timer</button>
+      <button id="tab-stopwatch" class="tab-btn">Stopwatch</button>
+    </div>
+
+    <!-- Display area with progress ring -->
+    <div class="display-container">
+      <svg class="progress-ring" width="250" height="250">
+        <circle class="progress-ring-bg" cx="125" cy="125" r="110" />
+        <circle id="progress-fill" class="progress-ring-fill" cx="125" cy="125" r="110" />
+      </svg>
+      <div class="time-readout">
+        <span id="time-display">00:00:00</span>
+        <span id="milliseconds-display" class="hidden">.00</span>
+        <span id="status-display" class="status-text">Ready</span>
+      </div>
+    </div>
+
+    <!-- Custom Inputs for Timer -->
+    <div id="timer-inputs-container" class="timer-inputs">
+      <div class="input-group">
+        <label>Hrs</label>
+        <input type="number" id="input-hrs" min="0" max="9999" value="0" placeholder="0">
+      </div>
+      <div class="input-group">
+        <label>Mins</label>
+        <input type="number" id="input-mins" min="0" max="59" value="25" placeholder="25">
+      </div>
+      <div class="input-group">
+        <label>Secs</label>
+        <input type="number" id="input-secs" min="0" max="59" value="0" placeholder="0">
+      </div>
+    </div>
+
+    <!-- Black Circular Buttons -->
+    <div class="controls">
+      <button id="reset-btn" class="circle-btn secondary">Reset</button>
+      <button id="start-btn" class="circle-btn">Start</button>
+      <button id="stop-btn" class="circle-btn secondary">Stop</button>
+    </div>
+
+    <!-- History Trigger Button (Stopwatch Mode Only) -->
+    <div id="history-trigger-container" class="history-btn-wrapper hidden">
+      <button id="open-history-btn" class="history-trigger-btn">History</button>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Saved Sessions</h3>
+          <button id="close-history-btn" class="close-btn">&times;</button>
+        </div>
+        <div id="history-list" class="history-list">
+          <!-- Dynamically populated -->
+        </div>
+        <button id="clear-all-btn" class="clear-history-btn">Clear All History</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MAX_LIMIT_MS = 10000 * 60 * 60 * 1000; // 10,000 Hours limit
+
+    let mode = 'timer'; // 'timer' or 'stopwatch'
+    let isRunning = false;
+    let timerId = null;
+
+    // Timer State
+    let timerTotalSeconds = 25 * 60;
+    let timerRemainingSeconds = timerTotalSeconds;
+
+    // Stopwatch State
+    let stopwatchStartTime = 0;
+    let stopwatchElapsedTime = 0;
+    let stopwatchHistory = [];
+
+    // UI Elements
+    const tabTimer = document.getElementById('tab-timer');
+    const tabStopwatch = document.getElementById('tab-stopwatch');
+    const timeDisplay = document.getElementById('time-display');
+    const msDisplay = document.getElementById('milliseconds-display');
+    const statusDisplay = document.getElementById('status-display');
+    const startBtn = document.getElementById('start-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const progressFill = document.getElementById('progress-fill');
+    
+    // Timer Inputs
+    const timerInputsContainer = document.getElementById('timer-inputs-container');
+    const inputHrs = document.getElementById('input-hrs');
+    const inputMins = document.getElementById('input-mins');
+    const inputSecs = document.getElementById('input-secs');
+
+    // History Elements
+    const historyTriggerContainer = document.getElementById('history-trigger-container');
+    const openHistoryBtn = document.getElementById('open-history-btn');
+    const closeHistoryBtn = document.getElementById('close-history-btn');
+    const historyModal = document.getElementById('history-modal');
+    const historyList = document.getElementById('history-list');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+
+    const RADIUS = 110;
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+    progressFill.style.strokeDasharray = `${CIRCUMFERENCE}`;
+
+    function setProgress(percent) {
+      const offset = CIRCUMFERENCE - (percent * CIRCUMFERENCE);
+      progressFill.style.strokeDashoffset = offset;
+    }
+
+    function formatTimeComponents(totalSec) {
+      const hours = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      return { hours, mins, secs };
+    }
+
+    function formatTimeString(totalSec, showMs = false, msValue = 0) {
+      const { hours, mins, secs } = formatTimeComponents(totalSec);
+      let timeStr = "";
+      if (hours > 0) {
+        timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      } else {
+        timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+      if (showMs) {
+        timeStr += `.${String(msValue).padStart(2, '0')}`;
+      }
+      return timeStr;
+    }
+
+    function renderDisplay() {
+      if (mode === 'timer') {
+        const { hours, mins, secs } = formatTimeComponents(timerRemainingSeconds);
+        if (hours > 0) {
+          timeDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        } else {
+          timeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        if (hours > 999) {
+          timeDisplay.classList.add('small-font');
+        } else {
+          timeDisplay.classList.remove('small-font');
+        }
+
+        msDisplay.classList.add('hidden');
+        const progress = timerTotalSeconds > 0 ? timerRemainingSeconds / timerTotalSeconds : 0;
+        setProgress(progress);
+      } else {
+        const totalMs = stopwatchElapsedTime;
+        const totalSec = Math.floor(totalMs / 1000);
+        const { hours, mins, secs } = formatTimeComponents(totalSec);
+        const ms = Math.floor((totalMs % 1000) / 10);
+        
+        if (hours > 999) {
+          timeDisplay.classList.add('small-font');
+        } else {
+          timeDisplay.classList.remove('small-font');
+        }
+
+        if (hours > 0) {
+          timeDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        } else {
+          timeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        msDisplay.textContent = `.${String(ms).padStart(2, '0')}`;
+        msDisplay.classList.remove('hidden');
+
+        // Ring makes 1 full revolution per minute
+        const lapProgress = ((totalMs % 60000) / 60000);
+        setProgress(lapProgress);
+      }
+    }
+
+    function setTimerFromInputs() {
+      const h = parseInt(inputHrs.value) || 0;
+      const m = parseInt(inputMins.value) || 0;
+      const s = parseInt(inputSecs.value) || 0;
+      
+      timerTotalSeconds = (h * 3600) + (m * 60) + s;
+      timerRemainingSeconds = timerTotalSeconds;
+      renderDisplay();
+    }
+
+    function toggleRun() {
+      if (isRunning) {
+        pause();
+      } else {
+        start();
+      }
+    }
+
+    function start() {
+      if (isRunning) return;
+
+      if (mode === 'timer' && timerRemainingSeconds === 0) {
+        setTimerFromInputs();
+      }
+
+      isRunning = true;
+      startBtn.textContent = 'Pause';
+      statusDisplay.textContent = mode === 'timer' ? 'Focusing' : 'Running';
+
+      if (mode === 'timer') {
+        timerId = setInterval(() => {
+          if (timerRemainingSeconds > 0) {
+            timerRemainingSeconds--;
+            renderDisplay();
+          } else {
+            stop();
+            statusDisplay.textContent = 'Finished!';
+          }
+        }, 1000);
+      } else {
+        stopwatchStartTime = Date.now() - stopwatchElapsedTime;
+        timerId = setInterval(() => {
+          stopwatchElapsedTime = Date.now() - stopwatchStartTime;
+          
+          if (stopwatchElapsedTime >= MAX_LIMIT_MS) {
+            stopwatchElapsedTime = MAX_LIMIT_MS;
+            stop();
+            statusDisplay.textContent = 'Max Reached';
+          }
+          renderDisplay();
+        }, 10);
+      }
+    }
+
+    function pause() {
+      isRunning = false;
+      clearInterval(timerId);
+      timerId = null;
+      startBtn.textContent = 'Start';
+      statusDisplay.textContent = 'Paused';
+    }
+
+    function stop() {
+      if (mode === 'stopwatch' && stopwatchElapsedTime > 0) {
+        saveStopwatchHistory(stopwatchElapsedTime);
+      }
+      isRunning = false;
+      clearInterval(timerId);
+      timerId = null;
+      startBtn.textContent = 'Start';
+      statusDisplay.textContent = 'Stopped';
+      renderDisplay();
+    }
+
+    function reset() {
+      pause();
+      if (mode === 'timer') {
+        setTimerFromInputs();
+      } else {
+        stopwatchElapsedTime = 0;
+      }
+      statusDisplay.textContent = 'Ready';
+      renderDisplay();
+    }
+
+    // Stopwatch History Management
+    function saveStopwatchHistory(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const msPart = Math.floor((ms % 1000) / 10);
+      const timeFormatted = formatTimeString(totalSec, true, msPart);
+      
+      // Avoid duplicate consecutive saves
+      if (stopwatchHistory.length > 0 && stopwatchHistory[0].ms === ms) return;
+
+      stopwatchHistory.unshift({ id: Date.now(), ms, timeFormatted });
+      renderHistoryList();
+    }
+
+    function renderHistoryList() {
+      historyList.innerHTML = '';
+      if (stopwatchHistory.length === 0) {
+        historyList.innerHTML = '<div class="empty-state">No saved sessions yet.</div>';
+        return;
+      }
+
+      stopwatchHistory.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `
+          <span class="history-item-time">${item.timeFormatted}</span>
+          <div class="history-item-actions">
+            <button class="action-btn resume" onclick="startFromHistory(${item.ms})">Resume</button>
+            <button class="action-btn delete" onclick="deleteHistoryItem(${item.id})">Delete</button>
+          </div>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+
+    window.startFromHistory = function(ms) {
+      pause();
+      stopwatchElapsedTime = ms;
+      historyModal.classList.add('hidden');
+      start();
+    };
+
+    window.deleteHistoryItem = function(id) {
+      stopwatchHistory = stopwatchHistory.filter(item => item.id !== id);
+      renderHistoryList();
+    };
+
+    clearAllBtn.addEventListener('click', () => {
+      stopwatchHistory = [];
+      renderHistoryList();
+    });
+
+    // Inputs Change Listeners
+    [inputHrs, inputMins, inputSecs].forEach(input => {
+      input.addEventListener('input', () => {
+        if (!isRunning && mode === 'timer') {
+          setTimerFromInputs();
+        }
+      });
+    });
+
+    // Navigation Switches
+    tabTimer.addEventListener('click', () => {
+      if (mode === 'timer') return;
+      mode = 'timer';
+      tabTimer.classList.add('active');
+      tabStopwatch.classList.remove('active');
+      timerInputsContainer.classList.remove('hidden');
+      historyTriggerContainer.classList.add('hidden');
+      reset();
+    });
+
+    tabStopwatch.addEventListener('click', () => {
+      if (mode === 'stopwatch') return;
+      mode = 'stopwatch';
+      tabStopwatch.classList.add('active');
+      tabTimer.classList.remove('active');
+      timerInputsContainer.classList.add('hidden');
+      historyTriggerContainer.classList.remove('hidden');
+      reset();
+    });
+
+    // Modal Control
+    openHistoryBtn.addEventListener('click', () => historyModal.classList.remove('hidden'));
+    closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+
+    startBtn.addEventListener('click', toggleRun);
+    stopBtn.addEventListener('click', stop);
+    resetBtn.addEventListener('click', reset);
+
+    // Initial Setup
+    setTimerFromInputs();
+  </script>
+</body>
+</html>
