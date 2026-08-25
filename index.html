@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title> Timer & Stopwatch</title>
+  <title>Aesthetic Timer & Stopwatch</title>
   <style>
     :root {
       --bg-color: #f8fafc;
@@ -100,7 +100,7 @@
       stroke: var(--accent-color);
       stroke-width: 8;
       stroke-linecap: round;
-      stroke-dasharray: 691.15; /* 2 * PI * 110 */
+      stroke-dasharray: 691.15;
       stroke-dashoffset: 0;
       transition: stroke-dashoffset 0.2s linear;
     }
@@ -441,7 +441,7 @@
   <script>
     const MAX_LIMIT_MS = 10000 * 60 * 60 * 1000; // 10,000 Hours limit
 
-    let mode = 'timer'; // 'timer' or 'stopwatch'
+    let mode = 'timer';
     let isRunning = false;
     let timerId = null;
 
@@ -452,7 +452,7 @@
     // Stopwatch State
     let stopwatchStartTime = 0;
     let stopwatchElapsedTime = 0;
-    let stopwatchHistory = [];
+    let stopwatchHistory = JSON.parse(localStorage.getItem('stopwatch_history')) || [];
 
     // UI Elements
     const tabTimer = document.getElementById('tab-timer');
@@ -549,7 +549,6 @@
         msDisplay.textContent = `.${String(ms).padStart(2, '0')}`;
         msDisplay.classList.remove('hidden');
 
-        // Ring makes 1 full revolution per minute
         const lapProgress = ((totalMs % 60000) / 60000);
         setProgress(lapProgress);
       }
@@ -635,21 +634,23 @@
         setTimerFromInputs();
       } else {
         stopwatchElapsedTime = 0;
+        localStorage.removeItem('stopwatch_current');
       }
       statusDisplay.textContent = 'Ready';
       renderDisplay();
     }
 
-    // Stopwatch History Management
+    // Local Storage Operations
     function saveStopwatchHistory(ms) {
       const totalSec = Math.floor(ms / 1000);
       const msPart = Math.floor((ms % 1000) / 10);
       const timeFormatted = formatTimeString(totalSec, true, msPart);
       
-      // Avoid duplicate consecutive saves
       if (stopwatchHistory.length > 0 && stopwatchHistory[0].ms === ms) return;
 
       stopwatchHistory.unshift({ id: Date.now(), ms, timeFormatted });
+      localStorage.setItem('stopwatch_history', JSON.stringify(stopwatchHistory));
+      localStorage.setItem('stopwatch_current', ms);
       renderHistoryList();
     }
 
@@ -683,11 +684,13 @@
 
     window.deleteHistoryItem = function(id) {
       stopwatchHistory = stopwatchHistory.filter(item => item.id !== id);
+      localStorage.setItem('stopwatch_history', JSON.stringify(stopwatchHistory));
       renderHistoryList();
     };
 
     clearAllBtn.addEventListener('click', () => {
       stopwatchHistory = [];
+      localStorage.removeItem('stopwatch_history');
       renderHistoryList();
     });
 
@@ -721,16 +724,25 @@
       reset();
     });
 
-    // Modal Control
-    openHistoryBtn.addEventListener('click', () => historyModal.classList.remove('hidden'));
+    // Modal Controls
+    openHistoryBtn.addEventListener('click', () => {
+      renderHistoryList();
+      historyModal.classList.remove('hidden');
+    });
     closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
 
     startBtn.addEventListener('click', toggleRun);
     stopBtn.addEventListener('click', stop);
     resetBtn.addEventListener('click', reset);
 
-    // Initial Setup
+    // Load Last Active Stopwatch Session if available
+    const savedCurrentStopwatch = localStorage.getItem('stopwatch_current');
+    if (savedCurrentStopwatch) {
+      stopwatchElapsedTime = parseInt(savedCurrentStopwatch, 10);
+    }
+
     setTimerFromInputs();
+    renderHistoryList();
   </script>
 </body>
 </html>
